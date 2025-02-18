@@ -1,113 +1,147 @@
 <?php
-session_start(); 
+// Koneksi ke database
+include 'koneksi.php';
 
-// Logika untuk memeriksa apakah pengguna sudah login
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");  // Jika belum login, arahkan ke halaman login
-    exit();
+// Tambah tugas baru
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add'])) {
+    $title = $_POST['title'] ?? '';
+    $description = $_POST['description'] ?? '';
+    $status = $_POST['status'] ?? 'pending';
+
+    if (!empty($title)) {
+        $stmt = $conn->prepare("INSERT INTO todos (title, description, status) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $title, $description, $status);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
+
+// Edit tugas
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit'])) {
+    $id = $_POST['id'];
+    $title = $_POST['title'];
+    $description = $_POST['description'];
+
+    if (!empty($title)) {
+        $stmt = $conn->prepare("UPDATE todos SET title=?, description=? WHERE id=?");
+        $stmt->bind_param("ssi", $title, $description, $id);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+// Hapus tugas
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM todos WHERE id=?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+}
+
+
+// Tandai sebagai selesai
+if (isset($_GET['complete'])) {
+    $id = $_GET['complete'];
+    $stmt = $conn->prepare("UPDATE todos SET status='completed' WHERE id=?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Ambil semua tugas dari database
+$result = $conn->query("SELECT * FROM todos ORDER BY created_at DESC");
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Kasir</title>
-  <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <style>
-      body {
-          background-color: #343a40; /* Latar belakang gelap */
-          color: #f8f9fa; /* Teks berwarna terang */
-      }
-      .navbar {
-          margin-bottom: 30px;
-      }
-      .card {
-          background-color: #212529; /* Warna latar belakang kartu */
-          border: none;
-          box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
-      }
-      .card-body {
-          color: #f8f9fa;
-      }
-      .btn-primary {
-          background-color: #28a745; /* Warna hijau */
-          border: none;
-      }
-      .btn-primary:hover {
-          background-color: #218838;
-      }
-      .navbar-brand, .navbar-text {
-          color: #f8f9fa;
-      }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body { background-color: #121212; color: white; font-family: Arial, sans-serif; text-align: center; }
+        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid #444; padding: 10px; }
+        th { background-color: #222; }
+        tr:nth-child(even) { background-color: #1e1e1e; }
+        .form-container { width: 80%; margin: 20px auto; background: #1e1e1e; padding: 20px; border-radius: 8px; }
+        input, textarea, select, button { width: 100%; padding: 10px; margin: 5px 0; }
+        .btn { cursor: pointer; }
+        .edit { background: orange; color: white; }
+        .delete { background: red; color: white; }
+        .complete { background: green; color: white; }
+    </style>
 </head>
-
 <body>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="#">Dashboard</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <span class="navbar-text">Selamat datang, <?= $_SESSION['username']; ?>!</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-danger text-white ml-3" href="logout.php">Logout</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<h1>To-Do List</h1>
 
-    <!-- Konten Utama -->
-    <div class="container">
-        <div class="row">
-            <!-- Transaksi Penjualan -->
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Transaksi Penjualan</h5>
-                        <p class="card-text">Buat transaksi penjualan baru</p>
-                        <a href="test1.php" class="btn btn-primary">Buka Transaksi</a>
-                    </div>
-                </div>
-            </div>
+<!-- Form Tambah Tugas -->
+<div class="form-container">
+    <form method="POST">
+        <input type="text" name="title" placeholder="Judul Tugas" required>
+        <textarea name="description" placeholder="Deskripsi Tugas (opsional)"></textarea>
+        <select name="status">
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+        </select>
+        <button type="submit" name="add">Tambah Tugas</button>
+    </form>
+</div>
 
-            <!-- Manajemen Produk -->
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Manajemen Produk</h5>
-                        <p class="card-text">Kelola produk yang dijual</p>
-                        <a href="edit_produk.php" class="btn btn-primary">Kelola Produk</a>
-                    </div>
-                </div>
-            </div>
+<!-- Tabel Tugas -->
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Judul</th>
+            <th>Deskripsi</th>
+            <th>Status</th>
+            <th>Waktu Dibuat</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php while ($row = $result->fetch_assoc()): ?>
+            <tr>
+                <td><?= $row['id'] ?></td>
+                <td><?= $row['title'] ?></td>
+                <td><?= $row['description'] ?></td>
+                <td><?= $row['status'] ?></td>
+                <td><?= $row['created_at'] ?></td>
+                <td>
+                    <button class="edit btn" onclick="editTask(<?= $row['id'] ?>, '<?= $row['title'] ?>', '<?= $row['description'] ?>')">Edit</button>
+                    <a href="?delete=<?= $row['id'] ?>" class="delete btn" onclick="return confirm('Hapus tugas ini?')">Hapus</a>
+                    <?php if ($row['status'] != 'completed'): ?>
+                        <a href="?complete=<?= $row['id'] ?>" class="complete btn">Selesaikan</a>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endwhile; ?>
+    </tbody>
+</table>
 
-            <!-- Laporan -->
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Laporan</h5>
-                        <p class="card-text">Lihat laporan transaksi penjualan</p>
-                        <a href="laporan.php" class="btn btn-primary">Lihat Laporan</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Form Edit Tugas -->
+<div class="form-container" id="editForm" style="display: none;">
+    <h2>Edit Tugas</h2>
+    <form method="POST">
+        <input type="hidden" name="id" id="editId">
+        <input type="text" name="title" id="editTitle" required>
+        <textarea name="description" id="editDescription"></textarea>
+        <button type="submit" name="edit">Simpan Perubahan</button>
+        <button type="button" onclick="document.getElementById('editForm').style.display='none'">Batal</button>
+    </form>
+</div>
 
-    <!-- Optional Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    function editTask(id, title, description) {
+        document.getElementById('editForm').style.display = 'block';
+        document.getElementById('editId').value = id;
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editDescription').value = description;
+    }
+</script>
 
 </body>
 </html>
