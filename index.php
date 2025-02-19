@@ -1,147 +1,86 @@
+
 <?php
-// Koneksi ke database
 include 'koneksi.php';
+session_start();
 
-// Tambah tugas baru
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add'])) {
-    $title = $_POST['title'] ?? '';
-    $description = $_POST['description'] ?? '';
-    $status = $_POST['status'] ?? 'pending';
-
-    if (!empty($title)) {
-        $stmt = $conn->prepare("INSERT INTO todos (title, description, status) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $title, $description, $status);
-        $stmt->execute();
-        $stmt->close();
-    }
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");  
+    exit();
 }
 
-// Edit tugas
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit'])) {
-    $id = $_POST['id'];
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-
-    if (!empty($title)) {
-        $stmt = $conn->prepare("UPDATE todos SET title=?, description=? WHERE id=?");
-        $stmt->bind_param("ssi", $title, $description, $id);
-        $stmt->execute();
-        $stmt->close();
-    }
-}
-
-// Hapus tugas
-if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM todos WHERE id=?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $stmt->close();
-}
-
-
-// Tandai sebagai selesai
-if (isset($_GET['complete'])) {
-    $id = $_GET['complete'];
-    $stmt = $conn->prepare("UPDATE todos SET status='completed' WHERE id=?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $stmt->close();
-}
-
-// Ambil semua tugas dari database
-$result = $conn->query("SELECT * FROM todos ORDER BY created_at DESC");
+$search = isset($_GET['search']) ? $_GET['search'] : '';
+$query = "SELECT * FROM todos WHERE category LIKE '%$search%' OR description LIKE '%$search%' ORDER BY created_at DESC";
+$result = $conn->query($query);
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <title>To-Do List</title>
-    <style>
-        body { background-color: #121212; color: white; font-family: Arial, sans-serif; text-align: center; }
-        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
-        th, td { border: 1px solid #444; padding: 10px; }
-        th { background-color: #222; }
-        tr:nth-child(even) { background-color: #1e1e1e; }
-        .form-container { width: 80%; margin: 20px auto; background: #1e1e1e; padding: 20px; border-radius: 8px; }
-        input, textarea, select, button { width: 100%; padding: 10px; margin: 5px 0; }
-        .btn { cursor: pointer; }
-        .edit { background: orange; color: white; }
-        .delete { background: red; color: white; }
-        .complete { background: green; color: white; }
-    </style>
 </head>
-<body>
+<body class="bg-dark text-light">
 
-<h1>To-Do List</h1>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">To-Do List</a>
+        <form class="form-inline my-2 my-lg-0" method="GET">
+            <input class="form-control mr-sm-2" type="search" name="search" placeholder="Cari Tugas" value="<?= $search ?>">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Cari</button>
+        </form>
+        <a class="btn btn-danger ml-3" href="logout.php" onclick="return confirm('yakin ingin logout?')">Logout</a>
+    </div>
+</nav>
 
-<!-- Form Tambah Tugas -->
-<div class="form-container">
-    <form method="POST">
-        <input type="text" name="title" placeholder="Judul Tugas" required>
-        <textarea name="description" placeholder="Deskripsi Tugas (opsional)"></textarea>
-        <select name="status">
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-        </select>
-        <button type="submit" name="add">Tambah Tugas</button>
-    </form>
-</div>
-
-<!-- Tabel Tugas -->
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Judul</th>
-            <th>Deskripsi</th>
-            <th>Status</th>
-            <th>Waktu Dibuat</th>
-            <th>Aksi</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php while ($row = $result->fetch_assoc()): ?>
+<div class="container mt-5">
+    <h1 class="text-center">To-Do List</h1>
+    <a href="add.php" class="btn btn-primary mb-3">Tambah Tugas</a>
+    <a href="categories.php" class="btn btn-primary mb-3">category</a>
+    
+    <table class="table table-dark table-hover">
+        <thead>
             <tr>
-                <td><?= $row['id'] ?></td>
-                <td><?= $row['title'] ?></td>
-                <td><?= $row['description'] ?></td>
-                <td><?= $row['status'] ?></td>
-                <td><?= $row['created_at'] ?></td>
-                <td>
-                    <button class="edit btn" onclick="editTask(<?= $row['id'] ?>, '<?= $row['title'] ?>', '<?= $row['description'] ?>')">Edit</button>
-                    <a href="?delete=<?= $row['id'] ?>" class="delete btn" onclick="return confirm('Hapus tugas ini?')">Hapus</a>
-                    <?php if ($row['status'] != 'completed'): ?>
-                        <a href="?complete=<?= $row['id'] ?>" class="complete btn">Selesaikan</a>
-                    <?php endif; ?>
-                </td>
+                <th>Kategori</th>
+                <th>Deskripsi</th>
+                <th>Status</th>
+                <th>Prioritas</th>
+                <th>Waktu Dibuat</th>
+                <th>Waktu Selesai</th>
+                <th>Aksi</th>
             </tr>
-        <?php endwhile; ?>
-    </tbody>
-</table>
-
-<!-- Form Edit Tugas -->
-<div class="form-container" id="editForm" style="display: none;">
-    <h2>Edit Tugas</h2>
-    <form method="POST">
-        <input type="hidden" name="id" id="editId">
-        <input type="text" name="title" id="editTitle" required>
-        <textarea name="description" id="editDescription"></textarea>
-        <button type="submit" name="edit">Simpan Perubahan</button>
-        <button type="button" onclick="document.getElementById('editForm').style.display='none'">Batal</button>
-    </form>
+        </thead>
+        <tbody>
+            <?php while ($row = $result->fetch_assoc()): ?>
+                <tr>
+                    <td><?= $row['category'] ?></td>
+                    <td><?= $row['description'] ?></td>
+                    <td>
+                        <span class="badge bg-<?= $row['status'] == 'completed' ? 'success' : 'warning' ?>">
+                            <?= ucfirst($row['status']) ?>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-<?= $row['priority'] == 'urgent' ? 'danger' : 'success' ?>">
+                            <?= ucfirst($row['priority']) ?>
+                        </span>
+                    </td>
+                    <td><?= $row['created_at'] ?></td>
+                    <td><?= $row['completed_at'] ? $row['completed_at'] : '-' ?></td>
+                    <td>
+                        <a href="edit.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="delete.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Hapus tugas ini?')">Hapus</a>
+                        <?php if ($row['status'] != 'completed'): ?>
+                            <a href="complete.php?id=<?= $row['id'] ?>" class="btn btn-success btn-sm">Selesaikan</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endwhile; ?>
+        </tbody>
+    </table>
 </div>
 
-<script>
-    function editTask(id, title, description) {
-        document.getElementById('editForm').style.display = 'block';
-        document.getElementById('editId').value = id;
-        document.getElementById('editTitle').value = title;
-        document.getElementById('editDescription').value = description;
-    }
-</script>
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
