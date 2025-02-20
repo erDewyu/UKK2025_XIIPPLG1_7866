@@ -1,15 +1,45 @@
+
+<?php
+session_start();
+include 'koneksi.php';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $username = $_POST['username'];
+    $password = $_POST['password'];
+
+    $stmt = $conn->prepare("SELECT * FROM user WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        
+        if (password_verify($password, $user['password'])) {
+            $_SESSION['username'] = $username;
+            header("Location: index.php");
+            exit();
+        } else {
+            echo '<script>alert("LOGIN GAGAL! Silakan coba lagi"); window.location.href="login.php";</script>';
+        }
+    }
+
+    $stmt->close();
+    $conn->close();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login Page</title>
-  <!-- Bootstrap CSS -->
+ 
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
       body {
-          background-color: #343a40; /* Latar belakang gelap */
-          color: #f8f9fa; /* Teks berwarna terang */
+          background-color: #343a40; 
+          color: #f8f9fa; 
           display: flex;
           justify-content: center;
           align-items: center;
@@ -17,7 +47,7 @@
           margin: 0;
       }
       .login-container {
-          background-color: #212529; /* Warna latar belakang form login */
+          background-color: #212529; 
           padding: 40px;
           border-radius: 10px;
           box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
@@ -25,12 +55,12 @@
           width: 100%;
       }
       .login-container h1 {
-          color: #f8f9fa; /* Warna judul */
+          color: #f8f9fa; 
           margin-bottom: 30px;
           text-align: center;
       }
       .btn {
-          background-color: #28a745; /* Hijau */
+          background-color: #28a745; 
           border: none;
           color: #fff;
           font-weight: bold;
@@ -61,7 +91,7 @@
       .alert {
           margin-top: 20px;
           opacity: 0;
-          animation: fadeIn 0.5s forwards; /* Animasi fade-in */
+          animation: fadeIn 0.5s forwards; 
       }
       @keyframes fadeIn {
           to {
@@ -86,57 +116,13 @@
         <button type="submit" class="btn btn-success">Login</button>
       </form>
 
-      <!-- Link untuk pengguna yang belum punya akun -->
+      
       <div class="register-link">
         <p>Belum punya akun? <a href="register.php">Daftar di sini</a></p>
       </div>
 
-      <!-- Menampilkan pesan error jika ada -->
-      <?php if (isset($error_message)): ?>
-          <div class="alert alert-danger">
-              <?= $error_message; ?>
-          </div>
-      <?php endif; ?>
-    </div>
-
-    <!-- Optional Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 </body>
 </html>
-
-<?php
-session_start();
-include 'koneksi.php';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
-
-    // Query untuk mencari username
-    $stmt = $conn->prepare("SELECT * FROM user WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-
-        // Verifikasi password (langsung bandingkan dengan password di database)
-        if ($password === $user['password']) {
-            $_SESSION['username'] = $username; // Simpan username di session
-            header("Location: index.php");
-            exit();
-        } else {
-            $error_message = "Password salah!";
-        }
-    } else {
-        $error_message = "Username salah!";
-    }
-
-    // Tutup statement dan koneksi
-    $stmt->close();
-    $conn->close();
-}
-?>

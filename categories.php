@@ -3,13 +3,11 @@
 include 'koneksi.php';
 session_start();
 
-// Cek apakah user sudah login
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
 
-// Tambah kategori
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add'])) {
     $name = trim($_POST['name']);
     if (!empty($name)) {
@@ -27,7 +25,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add'])) {
     exit();
 }
 
-// Hapus kategori
 if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
     $stmt = $conn->prepare("DELETE FROM categories WHERE id = ?");
@@ -39,7 +36,6 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Edit kategori
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['edit'])) {
     $id = $_POST['id'];
     $name = trim($_POST['name']);
@@ -56,7 +52,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['edit'])) {
     exit();
 }
 
-// Ambil semua kategori
 $result = $conn->query("SELECT * FROM categories ORDER BY id DESC");
 ?>
 
@@ -76,7 +71,6 @@ $result = $conn->query("SELECT * FROM categories ORDER BY id DESC");
             <div class="alert alert-info"><?= $_SESSION['message']; unset($_SESSION['message']); ?></div>
         <?php endif; ?>
 
-        <!-- Form Tambah Kategori -->
         <form method="POST" class="bg-secondary p-4 rounded">
             <h4>Tambah Kategori</h4>
             <div class="form-group">
@@ -88,7 +82,6 @@ $result = $conn->query("SELECT * FROM categories ORDER BY id DESC");
 
         <hr>
 
-        <!-- Tabel Data Kategori -->
         <h4>Daftar Kategori</h4>
         <table class="table table-dark table-bordered">
             <thead>
@@ -109,7 +102,6 @@ $result = $conn->query("SELECT * FROM categories ORDER BY id DESC");
                     </td>
                 </tr>
 
-                <!-- Modal Edit -->
                 <div class="modal fade" id="editModal<?= $row['id']; ?>" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content bg-dark text-light">
